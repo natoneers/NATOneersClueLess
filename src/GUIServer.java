@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.natoneers.client;
+//package com.natoneers.client;
 
 /**
  *
@@ -30,7 +30,7 @@ import javax.swing.ImageIcon;
 public class GUIServer extends javax.swing.JFrame implements WindowListener {
 
     private static final long serialVersionUID = 1L;
-    private ServerJFrame server;
+    private ServerSetUp server;
 
     int posX = 0, posY = 0;
     
@@ -86,8 +86,8 @@ public class GUIServer extends javax.swing.JFrame implements WindowListener {
             appendEvent("Invalid port number");
             return;
         }
-        // ceate a new ServerJFrame
-        server = new ServerJFrame(port, this);
+        // ceate a new ServerSetUp
+        server = new ServerSetUp(port, this);
         // and start it as a thread
         new ServerRunning().start();
         stopStart.setText("STOP");
@@ -350,7 +350,7 @@ public class GUIServer extends javax.swing.JFrame implements WindowListener {
     
     @Override
     public void windowClosing(WindowEvent e) {
-        // if my ServerJFrame exist
+        // if my ServerSetUp exist
         if (server != null) {
             try {
                 server.stop();			// ask the server to close the conection
@@ -394,7 +394,7 @@ public class GUIServer extends javax.swing.JFrame implements WindowListener {
     }
 
     /*
-	 * A thread to run the ServerJFrame
+	 * A thread to run the ServerSetUp
      */
     class ServerRunning extends Thread {
         private SimpleDateFormat sdf;

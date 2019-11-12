@@ -1,9 +1,9 @@
 /*
  * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
+ * To change this template file, choose | Templates
  * and open the template in the editor.
  */
-package com.natoneers.client;
+//package com.natoneers.client;
 
 /**
  *
@@ -29,12 +29,12 @@ import javax.swing.JFrame;
 /*
  * The server that can be run both as a console application or a GUI
  */
-public class ServerJFrame {
+public class ServerSetUp {
     // a unique ID for each connection
 
     private static int uniqueId;
     // an ArrayList to keep the list of the Client
-    private ArrayList<ClientThread> al;
+    private ArrayList<ClientThread> PlayerList;
     // if I am in a GUI
     private GUIServer sg;
     // to display time
@@ -43,17 +43,21 @@ public class ServerJFrame {
     private int port;
     // the boolean that will be turned of to stop the server
     private boolean keepGoing;
+    
+    //Hardcode number of players for now
+    private  final int constNumPlayers = 3;
 
-
+   //Keep track of the number of players
+    private int numPlayers;
     /*
 	 *  server constructor that receive the port to listen to for connection as parameter
 	 *  in console
      */
-    public ServerJFrame(int port) {
+    public ServerSetUp(int port) {
         this(port, null);
     }
 
-    public ServerJFrame(int port, GUIServer sg) {
+    public ServerSetUp(int port, GUIServer sg) {
         // GUI or not
         this.sg = sg;
         // the port
@@ -61,7 +65,7 @@ public class ServerJFrame {
         // to display hh:mm:ss
         sdf = new SimpleDateFormat("HH:mm:ss");
         // ArrayList for the Client list
-        al = new ArrayList<ClientThread>();
+        PlayerList = new ArrayList<ClientThread>();
     }
 
     public void start() {
@@ -82,14 +86,14 @@ public class ServerJFrame {
                     break;
                 }
                 ClientThread t = new ClientThread(socket);  // make a thread of it
-                al.add(t);									// save it in the ArrayList
+                PlayerList.add(t);			   // save it in the ArrayList
                 t.start();
             }
             // I was asked to stop
             try {
                 serverSocket.close();
-                for (int i = 0; i < al.size(); ++i) {
-                    ClientThread tc = al.get(i);
+                for (int i = 0; i < PlayerList.size(); ++i) {
+                    ClientThread tc = PlayerList.get(i);
                     try {
                         tc.sInput.close();
                         tc.sOutput.close();
@@ -101,7 +105,7 @@ public class ServerJFrame {
             } catch (Exception e) {
                 display("Exception closing the server and clients: " + e);
             }
-        } // something went bad
+        } // something went bad // something went bad
         catch (IOException e) {
             String msg = sdf.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
             display(msg);
@@ -137,7 +141,7 @@ public class ServerJFrame {
     /*
 	 *  to broadcast a message to all Clients
      */
-    private synchronized void broadcast(String message) {
+    protected synchronized void broadcast(String message) {
         // add HH:mm:ss and \n to the message
         String time = sdf.format(new Date());
         String messageLf = time + " " + message + "\n";
@@ -149,24 +153,30 @@ public class ServerJFrame {
         }
         // we loop in reverse order in case we would have to remove a Client
         // because it has disconnected
-        for (int i = al.size(); --i >= 0;) {
-            ClientThread ct = al.get(i);
+        for (int i = PlayerList.size(); --i >= 0;) {
+            ClientThread ct = PlayerList.get(i);
             // try to write to the Client if it fails remove it from the list
             if (!ct.writeMsg(messageLf)) {
-                al.remove(i);
-                display("Disconnected Client " + ct.username + " removed from list.");
+                PlayerList.remove(i);
+                display("Disconnected Client " + ct.ipAddress + " removed from list.");
             }
         }
     }
+    
+     protected synchronized void startGame(){
+         
+         new GameThread(numPlayers,this);
+         
+     }
 
     // for a client who logoff using the LOGOUT message
     synchronized void remove(int id) {
         // scan the array list until we found the Id
-        for (int i = 0; i < al.size(); ++i) {
-            ClientThread ct = al.get(i);
+        for (int i = 0; i < PlayerList.size(); ++i) {
+            ClientThread ct = PlayerList.get(i);
             // found it
             if (ct.id == id) {
-                al.remove(i);
+                PlayerList.remove(i);
                 return;
             }
         }
@@ -174,8 +184,8 @@ public class ServerJFrame {
 
     /*
 	 *  To run as a console application just open a console window and: 
-	 * > java ServerJFrame
-	 * > java ServerJFrame portNumber
+	 * > java ServerSetUp
+	 * > java ServerSetUp portNumber
      */
     public static void main(String[] args) {
         // start server on port 59001 unless a PortNumber is specified 
@@ -197,7 +207,7 @@ public class ServerJFrame {
 
         }
         // create a server object and start it
-        ServerJFrame server = new ServerJFrame(portNumber);
+        ServerSetUp server = new ServerSetUp(portNumber);
         server.start();
     }
 
@@ -212,14 +222,18 @@ public class ServerJFrame {
         ObjectOutputStream sOutput;
         // my unique id (easier for deconnection)
         int id;
-        // the Username of the Client
-        String username;
-        // the only type of message a will receive
-        GameMessage cm;
-        // the date I connect
+        // the ipAddress of the Client
+        String ipAddress;
+        // PlayerName
+        String playerName;
+        // Player number
+        int playerNumber;
+        //Game message types
+        GameMessage gameMessage;
+        // Time connected
         String date;
 
-        // Constructore
+        // Constructor
         ClientThread(Socket socket) {
             // a unique id
             id = ++uniqueId;
@@ -230,14 +244,21 @@ public class ServerJFrame {
                 // create output first
                 sOutput = new ObjectOutputStream(socket.getOutputStream());
                 sInput = new ObjectInputStream(socket.getInputStream());
-                // read the username
-                username = (String) sInput.readObject();
-                display(username + " just connected.");
+                // read the ipAddress
+                ipAddress = (String) sInput.readObject();
+                display(ipAddress + " just connected.");
+                //Show player who just joined all other Players who have joined
+               
+                writeMsg("Current Players: \n");
+                for (int i = 0; i < PlayerList.size(); ++i) {
+                    ClientThread ct = PlayerList.get(i);
+                    if (!ct.playerName.isEmpty())
+                        writeMsg((i + 1) + ") " + ct.playerName + " since " + ct.date);
+                }
             } catch (IOException e) {
                 display("Exception creating new Input/output Streams: " + e);
                 return;
-            } // have to catch ClassNotFoundException
-            // but I read a String, I am sure it will work
+            } // Catch ClassNotFoundException
             catch (ClassNotFoundException e) {
             }
             date = new Date().toString() + "\n";
@@ -250,34 +271,50 @@ public class ServerJFrame {
             while (keepGoing) {
                 // read a String (which is an object)
                 try {
-                    cm = (GameMessage) sInput.readObject();
+                    gameMessage = (GameMessage) sInput.readObject();
                 } catch (IOException e) {
-                    display(username + " Exception reading Streams: " + e);
+                    display(ipAddress + " Exception reading Streams: " + e);
                     break;
                 } catch (ClassNotFoundException e2) {
                     break;
                 }
                 // the messaage part of the GameMessage
-                String message = cm.getMessage();
+                String message = gameMessage.getMessage();
 
                 // Switch on the type of message receive
-                switch (cm.getType()) {
+                switch (gameMessage.getType()) {
 
                     case GameMessage.MESSAGE:
-                        broadcast(username + ": " + message);
+                        //broadcast(ipAddress + ": " + message);
                         break;
                     case GameMessage.LOGOUT:
-                        display(username + " disconnected with a LOGOUT message.");
+                        display(ipAddress + " disconnected with a LOGOUT message.");
                         keepGoing = false;
                         break;
                     case GameMessage.WHOISIN:
                         writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");
-                        // scan al the users connected
-                        for (int i = 0; i < al.size(); ++i) {
-                            ClientThread ct = al.get(i);
-                            writeMsg((i + 1) + ") " + ct.username + " since " + ct.date);
+                        // scan PlayerList the users connected
+                        for (int i = 0; i < PlayerList.size(); ++i) {
+                            ClientThread ct = PlayerList.get(i);
+                            writeMsg((i + 1) + ") " + ct.ipAddress + " since " + ct.date);
                         }
                         break;
+                    case GameMessage.JOIN:
+                        // playerName
+                        int i = message.indexOf(' ');
+                        playerName = message.substring(0, i);
+                        broadcast(ipAddress + ": " + message);
+                        numPlayers++;
+                        //broadcast(message);
+                        broadcast("Number of Players Joined: " + numPlayers );
+                        int numPlayersNeeded = constNumPlayers-numPlayers;
+                        if(numPlayers < 3)
+                            broadcast("Number of Players Needed to Start Game: " + numPlayersNeeded );
+                        else{
+                            broadcast("Game Starting");
+                            startGame();}
+                        break;
+                        
                 }
             }
             // remove myself from the arrayList containing the list of the
@@ -305,7 +342,7 @@ public class ServerJFrame {
                 if (socket != null) {
                     socket.close();
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
             }
         }
 
@@ -323,7 +360,7 @@ public class ServerJFrame {
                 sOutput.writeObject(msg);
             } // if an error occurs, do not abort just inform the user
             catch (IOException e) {
-                display("Error sending message to " + username);
+                display("Error sending message to " + ipAddress);
                 display(e.toString());
             }
             return true;

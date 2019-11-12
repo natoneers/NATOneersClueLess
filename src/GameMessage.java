@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.natoneers.client;
+//package com.natoneers.client;
 import java.io.*;
 /**
  *
@@ -29,7 +29,8 @@ public class GameMessage implements Serializable {
     // WHOISIN to receive the list of the users connected
     // MESSAGE an ordinary message
     // LOGOUT to disconnect from the Server
-    static final int WHOISIN = 0, MESSAGE = 1, LOGOUT = 2;
+    static final int WHOISIN = 0, MESSAGE = 1, LOGOUT = 2, JOIN = 3,MOVE = 4, SUGGESTION = 5, 
+            ACCUSATION = 6, ENDTURN = 7, SHOWCARD = 8;
     private int type;
     private String message;
 
@@ -48,4 +49,3 @@ public class GameMessage implements Serializable {
         return message;
     }
 }
-
